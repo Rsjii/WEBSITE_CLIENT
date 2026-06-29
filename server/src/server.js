@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import { config, printConfigWarnings } from './config.js'
+import { migrate } from './migrate.js'
 import authRoutes from './routes/auth.routes.js'
 
 const app = express()
@@ -10,7 +11,6 @@ app.set('trust proxy', 1)
 app.use(
   cors({
     origin(origin, cb) {
-      // Allow same-origin / server-to-server (no Origin header) and whitelisted origins.
       if (!origin || config.corsOrigins.includes(origin)) return cb(null, true)
       cb(new Error(`Origin ${origin} not allowed by CORS`))
     },
@@ -20,7 +20,6 @@ app.use(
 app.use(express.json({ limit: '1mb' }))
 app.use(cookieParser())
 
-// Public runtime config the frontend can read (client id is not a secret).
 app.get('/api/config', (req, res) => {
   res.json({ googleClientId: config.googleClientId || null, googleEnabled: Boolean(config.googleClientId) })
 })
@@ -38,6 +37,14 @@ app.use((err, req, res, next) => {
 })
 
 printConfigWarnings()
-app.listen(config.port, () => {
-  console.log(`\x1b[32m✓ AuraTrade API running\x1b[0m  →  http://localhost:${config.port}`)
-})
+
+migrate()
+  .then(() => {
+    app.listen(config.port, () => {
+      console.log(`\x1b[32m✓ AuraTrade API running\x1b[0m  →  http://localhost:${config.port}`)
+    })
+  })
+  .catch((err) => {
+    console.error('\x1b[31m✗ Migration failed — server not started:\x1b[0m', err)
+    process.exit(1)
+  })

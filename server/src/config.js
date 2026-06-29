@@ -31,6 +31,9 @@ export const config = {
   resendApiKey: process.env.RESEND_API_KEY || '',
   emailFrom: process.env.EMAIL_FROM || 'AuraTrade <onboarding@resend.dev>',
 
+  // PostgreSQL
+  databaseUrl: process.env.DATABASE_URL || '',
+
   // Google OAuth (Google Identity Services credential verification)
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
 
@@ -50,6 +53,8 @@ export function printConfigWarnings() {
     warn('JWT_SECRET not set — using an insecure dev secret. Set JWT_SECRET in server/.env before production.')
   if (!config.resendApiKey)
     warn('RESEND_API_KEY not set — OTP & reset emails will be printed to this console instead of sent.')
+  if (!config.databaseUrl)
+    warn('DATABASE_URL not set — database queries will fail. Add a PostgreSQL service on Railway.')
   if (!config.googleClientId)
     warn('GOOGLE_CLIENT_ID not set — "Continue with Google" will be disabled until you add it.')
   if (config.isProd && config.jwtSecret === DEV_JWT_SECRET)

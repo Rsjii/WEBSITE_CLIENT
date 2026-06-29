@@ -1,127 +1,167 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import crypto from 'node:crypto'
+import pg from 'pg'
+import { config } from './config.js'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const DATA_DIR = path.resolve(__dirname, '..', 'data')
-const DB_FILE = path.join(DATA_DIR, 'db.json')
+export const pool = new pg.Pool({ connectionString: config.databaseUrl })
 
-const EMPTY = { users: [], pendingSignups: [], passwordResets: [] }
+const norm = (email) => String(email || '').trim().toLowerCase()
 
-function ensureFile() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
-  if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, JSON.stringify(EMPTY, null, 2))
-}
-
-function load() {
-  ensureFile()
-  try {
-    const raw = fs.readFileSync(DB_FILE, 'utf8')
-    return { ...EMPTY, ...JSON.parse(raw || '{}') }
-  } catch {
-    return structuredClone(EMPTY)
+function mapUser(row) {
+  if (!row) return null
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    avatar: row.avatar,
+    passwordHash: row.password_hash,
+    googleId: row.google_id,
+    providers: row.providers || [],
+    emailVerified: row.email_verified,
+    role: row.role,
+    balance: Number(row.balance),
+    currency: row.currency,
+    createdAt: row.created_at?.toISOString(),
+    updatedAt: row.updated_at?.toISOString(),
   }
 }
 
-// In-memory cache, persisted write-through with an atomic temp-file rename.
-let cache = load()
-
-function persist() {
-  ensureFile()
-  const tmp = DB_FILE + '.tmp'
-  fs.writeFileSync(tmp, JSON.stringify(cache, null, 2))
-  fs.renameSync(tmp, DB_FILE)
+function mapPending(row) {
+  if (!row) return null
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    passwordHash: row.password_hash,
+    otpHash: row.otp_hash,
+    otpExpires: row.otp_expires?.toISOString(),
+    attempts: row.attempts,
+    lastSentAt: row.last_sent_at?.toISOString(),
+    createdAt: row.created_at?.toISOString(),
+  }
 }
 
-const newId = () => crypto.randomUUID()
-const norm = (email) => String(email || '').trim().toLowerCase()
+function mapReset(row) {
+  if (!row) return null
+  return {
+    id: row.id,
+    userId: row.user_id,
+    tokenHash: row.token_hash,
+    expires: row.expires?.toISOString(),
+    used: row.used,
+    createdAt: row.created_at?.toISOString(),
+  }
+}
 
 export const db = {
   // ── Users ──────────────────────────────────────────────
-  findUserByEmail(email) {
-    const e = norm(email)
-    return cache.users.find((u) => u.email === e) || null
+  async findUserByEmail(email) {
+    const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [norm(email)])
+    return mapUser(rows[0])
   },
-  findUserById(id) {
-    return cache.users.find((u) => u.id === id) || null
+  async findUserById(id) {
+    const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [id])
+    return mapUser(rows[0])
   },
-  findUserByGoogleId(googleId) {
-    return cache.users.find((u) => u.googleId === googleId) || null
+  async findUserByGoogleId(googleId) {
+    const { rows } = await pool.query('SELECT * FROM users WHERE google_id = $1', [googleId])
+    return mapUser(rows[0])
   },
-  createUser(data) {
-    const now = new Date().toISOString()
-    const user = {
-      id: newId(),
-      email: norm(data.email),
-      name: data.name || norm(data.email).split('@')[0],
-      avatar: data.avatar || null,
-      passwordHash: data.passwordHash || null,
-      googleId: data.googleId || null,
-      providers: data.providers || [],
-      emailVerified: Boolean(data.emailVerified),
-      role: 'trader',
-      balance: 0,
-      currency: 'USD',
-      createdAt: now,
-      updatedAt: now,
+  async createUser(data) {
+    const { rows } = await pool.query(
+      `INSERT INTO users (email, name, avatar, password_hash, google_id, providers, email_verified)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        norm(data.email),
+        data.name || norm(data.email).split('@')[0],
+        data.avatar || null,
+        data.passwordHash || null,
+        data.googleId || null,
+        data.providers || [],
+        Boolean(data.emailVerified),
+      ],
+    )
+    return mapUser(rows[0])
+  },
+  async updateUser(id, patch) {
+    const colMap = {
+      name: 'name',
+      avatar: 'avatar',
+      passwordHash: 'password_hash',
+      googleId: 'google_id',
+      providers: 'providers',
+      emailVerified: 'email_verified',
+      role: 'role',
+      balance: 'balance',
+      currency: 'currency',
     }
-    cache.users.push(user)
-    persist()
-    return user
-  },
-  updateUser(id, patch) {
-    const u = this.findUserById(id)
-    if (!u) return null
-    Object.assign(u, patch, { updatedAt: new Date().toISOString() })
-    persist()
-    return u
+    const fields = []
+    const values = []
+    let i = 1
+    for (const [key, col] of Object.entries(colMap)) {
+      if (key in patch) {
+        fields.push(`${col} = $${i++}`)
+        values.push(patch[key])
+      }
+    }
+    if (!fields.length) return this.findUserById(id)
+    fields.push(`updated_at = NOW()`)
+    values.push(id)
+    const { rows } = await pool.query(
+      `UPDATE users SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`,
+      values,
+    )
+    return mapUser(rows[0])
   },
 
-  // ── Pending signups (email + password awaiting OTP) ────
-  findPendingByEmail(email) {
-    const e = norm(email)
-    return cache.pendingSignups.find((p) => p.email === e) || null
+  // ── Pending signups ────────────────────────────────────
+  async findPendingByEmail(email) {
+    const { rows } = await pool.query('SELECT * FROM pending_signups WHERE email = $1', [norm(email)])
+    return mapPending(rows[0])
   },
-  upsertPending(data) {
-    const e = norm(data.email)
-    const existing = cache.pendingSignups.find((p) => p.email === e)
-    if (existing) {
-      Object.assign(existing, data, { email: e })
-      persist()
-      return existing
-    }
-    const rec = { id: newId(), ...data, email: e, createdAt: new Date().toISOString() }
-    cache.pendingSignups.push(rec)
-    persist()
-    return rec
+  async upsertPending(data) {
+    const { rows } = await pool.query(
+      `INSERT INTO pending_signups (email, name, password_hash, otp_hash, otp_expires, attempts, last_sent_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (email) DO UPDATE SET
+         name          = EXCLUDED.name,
+         password_hash = EXCLUDED.password_hash,
+         otp_hash      = EXCLUDED.otp_hash,
+         otp_expires   = EXCLUDED.otp_expires,
+         attempts      = EXCLUDED.attempts,
+         last_sent_at  = EXCLUDED.last_sent_at
+       RETURNING *`,
+      [
+        norm(data.email),
+        data.name || null,
+        data.passwordHash || null,
+        data.otpHash,
+        data.otpExpires,
+        data.attempts ?? 0,
+        data.lastSentAt || new Date().toISOString(),
+      ],
+    )
+    return mapPending(rows[0])
   },
-  deletePending(email) {
-    const e = norm(email)
-    cache.pendingSignups = cache.pendingSignups.filter((p) => p.email !== e)
-    persist()
+  async deletePending(email) {
+    await pool.query('DELETE FROM pending_signups WHERE email = $1', [norm(email)])
   },
 
   // ── Password resets ────────────────────────────────────
-  createReset(data) {
-    const rec = { id: newId(), used: false, ...data, createdAt: new Date().toISOString() }
-    cache.passwordResets.push(rec)
-    persist()
-    return rec
-  },
-  findValidResetByHash(tokenHash) {
-    const now = Date.now()
-    return (
-      cache.passwordResets.find(
-        (r) => r.tokenHash === tokenHash && !r.used && new Date(r.expires).getTime() > now,
-      ) || null
+  async createReset(data) {
+    const { rows } = await pool.query(
+      `INSERT INTO password_resets (user_id, token_hash, expires) VALUES ($1, $2, $3) RETURNING *`,
+      [data.userId, data.tokenHash, data.expires],
     )
+    return mapReset(rows[0])
   },
-  consumeReset(id) {
-    const r = cache.passwordResets.find((x) => x.id === id)
-    if (r) {
-      r.used = true
-      persist()
-    }
+  async findValidResetByHash(tokenHash) {
+    const { rows } = await pool.query(
+      `SELECT * FROM password_resets WHERE token_hash = $1 AND used = false AND expires > NOW()`,
+      [tokenHash],
+    )
+    return mapReset(rows[0])
+  },
+  async consumeReset(id) {
+    await pool.query('UPDATE password_resets SET used = true WHERE id = $1', [id])
   },
 }

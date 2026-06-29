@@ -20,7 +20,6 @@ import { authLimiter, otpLimiter } from '../middleware/rateLimiters.js'
 
 const router = Router()
 
-// ── Validation helpers ───────────────────────────────────
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const isEmail = (e) => typeof e === 'string' && EMAIL_RE.test(e.trim())
 
@@ -32,7 +31,6 @@ function passwordIssue(pw) {
 }
 const cleanName = (n) => String(n || '').trim().slice(0, 60)
 
-// Wrap async handlers so thrown errors hit the error middleware.
 const a = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)
 
 function loginUser(res, user) {
@@ -40,7 +38,7 @@ function loginUser(res, user) {
   return res.json({ user: publicUser(user) })
 }
 
-// ── POST /signup  (email + password → OTP) ───────────────
+// ── POST /signup ─────────────────────────────────────────
 router.post(
   '/signup',
   otpLimiter,
@@ -53,18 +51,14 @@ router.post(
     if (acceptTerms !== true)
       return res.status(400).json({ error: 'You must accept the Terms & Conditions to continue.' })
 
-    const existing = db.findUserByEmail(email)
-    // A full account (already has a password) — don't let them re-register.
+    const existing = await db.findUserByEmail(email)
     if (existing?.passwordHash)
-      return res
-        .status(409)
-        .json({ error: 'An account with this email already exists. Please log in instead.', code: 'EXISTS' })
+      return res.status(409).json({ error: 'An account with this email already exists. Please log in instead.', code: 'EXISTS' })
 
-    // Google-only account adding a password is allowed — it links on verify.
     const passwordHash = await hashPassword(password)
     const code = generateOtp()
 
-    db.upsertPending({
+    await db.upsertPending({
       email,
       name: cleanName(name) || undefined,
       passwordHash,
@@ -78,7 +72,7 @@ router.post(
     res.json({
       ok: true,
       email: email.trim().toLowerCase(),
-      linking: Boolean(existing), // google account gaining a password
+      linking: Boolean(existing),
       devMode: Boolean(mail.dev),
     })
   }),
@@ -92,37 +86,34 @@ router.post(
     const { email, code } = req.body || {}
     if (!isEmail(email) || !code) return res.status(400).json({ error: 'Email and code are required.' })
 
-    const pending = db.findPendingByEmail(email)
+    const pending = await db.findPendingByEmail(email)
     if (!pending)
       return res.status(400).json({ error: 'No pending verification found. Please sign up again.', code: 'NO_PENDING' })
 
     if (new Date(pending.otpExpires).getTime() < Date.now()) {
-      db.deletePending(email)
+      await db.deletePending(email)
       return res.status(400).json({ error: 'Your code expired. Please request a new one.', code: 'EXPIRED' })
     }
     if ((pending.attempts || 0) >= config.otpMaxAttempts)
-      return res
-        .status(429)
-        .json({ error: 'Too many incorrect attempts. Please request a new code.', code: 'LOCKED' })
+      return res.status(429).json({ error: 'Too many incorrect attempts. Please request a new code.', code: 'LOCKED' })
 
     if (!safeEqualHash(pending.otpHash, hashValue(String(code).trim()))) {
-      db.upsertPending({ ...pending, attempts: (pending.attempts || 0) + 1 })
+      await db.upsertPending({ ...pending, attempts: (pending.attempts || 0) + 1 })
       const left = Math.max(0, config.otpMaxAttempts - (pending.attempts + 1))
       return res.status(400).json({ error: `Incorrect code.${left ? ` ${left} attempt(s) left.` : ''}`, code: 'BAD_CODE' })
     }
 
-    // Success — create the user, or link a password to an existing Google account.
-    const existing = db.findUserByEmail(email)
+    const existing = await db.findUserByEmail(email)
     let user
     if (existing) {
-      user = db.updateUser(existing.id, {
+      user = await db.updateUser(existing.id, {
         passwordHash: pending.passwordHash,
         emailVerified: true,
         name: existing.name || pending.name,
         providers: Array.from(new Set([...(existing.providers || []), 'password'])),
       })
     } else {
-      user = db.createUser({
+      user = await db.createUser({
         email,
         name: pending.name,
         passwordHash: pending.passwordHash,
@@ -130,7 +121,7 @@ router.post(
         providers: ['password'],
       })
     }
-    db.deletePending(email)
+    await db.deletePending(email)
     return loginUser(res, user)
   }),
 )
@@ -143,7 +134,7 @@ router.post(
     const { email } = req.body || {}
     if (!isEmail(email)) return res.status(400).json({ error: 'Please enter a valid email address.' })
 
-    const pending = db.findPendingByEmail(email)
+    const pending = await db.findPendingByEmail(email)
     if (!pending)
       return res.status(400).json({ error: 'Nothing to resend. Please sign up again.', code: 'NO_PENDING' })
 
@@ -154,7 +145,7 @@ router.post(
     }
 
     const code = generateOtp()
-    db.upsertPending({
+    await db.upsertPending({
       ...pending,
       otpHash: hashValue(code),
       otpExpires: new Date(Date.now() + config.otpTtlMin * 60_000).toISOString(),
@@ -174,10 +165,9 @@ router.post(
     const { email, password } = req.body || {}
     if (!isEmail(email) || !password) return res.status(400).json({ error: 'Email and password are required.' })
 
-    const user = db.findUserByEmail(email)
+    const user = await db.findUserByEmail(email)
     if (!user) return res.status(401).json({ error: 'Invalid email or password.' })
 
-    // Account exists but was created via Google and never set a password.
     if (!user.passwordHash)
       return res.status(409).json({
         error: 'This account uses Google sign-in. Continue with Google, or reset your password to set one.',
@@ -191,7 +181,7 @@ router.post(
   }),
 )
 
-// ── POST /google  (Google Identity Services credential) ──
+// ── POST /google ─────────────────────────────────────────
 router.post(
   '/google',
   authLimiter,
@@ -206,14 +196,12 @@ router.post(
       return res.status(401).json({ error: err.message || 'Could not verify Google sign-in.' })
     }
 
-    // 1) Known Google identity → log in.
-    let user = db.findUserByGoogleId(profile.googleId)
+    let user = await db.findUserByGoogleId(profile.googleId)
 
-    // 2) Same email already registered (e.g. via password) → link Google to it.
     if (!user) {
-      const byEmail = db.findUserByEmail(profile.email)
+      const byEmail = await db.findUserByEmail(profile.email)
       if (byEmail) {
-        user = db.updateUser(byEmail.id, {
+        user = await db.updateUser(byEmail.id, {
           googleId: profile.googleId,
           emailVerified: true,
           avatar: byEmail.avatar || profile.avatar,
@@ -222,9 +210,8 @@ router.post(
       }
     }
 
-    // 3) Brand new user.
     if (!user) {
-      user = db.createUser({
+      user = await db.createUser({
         email: profile.email,
         name: profile.name,
         avatar: profile.avatar,
@@ -234,7 +221,7 @@ router.post(
       })
     }
 
-    db.deletePending(profile.email) // any half-finished email signup is now moot
+    await db.deletePending(profile.email)
     return loginUser(res, user)
   }),
 )
@@ -245,13 +232,12 @@ router.post(
   otpLimiter,
   a(async (req, res) => {
     const { email } = req.body || {}
-    // Always respond ok — never reveal whether an email is registered.
     if (!isEmail(email)) return res.json({ ok: true })
 
-    const user = db.findUserByEmail(email)
+    const user = await db.findUserByEmail(email)
     if (user) {
       const token = generateToken()
-      db.createReset({
+      await db.createReset({
         userId: user.id,
         tokenHash: hashValue(token),
         expires: new Date(Date.now() + config.resetTtlMin * 60_000).toISOString(),
@@ -273,20 +259,20 @@ router.post(
     const pwIssue = passwordIssue(password)
     if (pwIssue) return res.status(400).json({ error: pwIssue })
 
-    const rec = db.findValidResetByHash(hashValue(token))
+    const rec = await db.findValidResetByHash(hashValue(token))
     if (!rec) return res.status(400).json({ error: 'This reset link is invalid or has expired.', code: 'BAD_TOKEN' })
 
-    const user = db.findUserById(rec.userId)
+    const user = await db.findUserById(rec.userId)
     if (!user) return res.status(400).json({ error: 'Account not found.' })
 
     const passwordHash = await hashPassword(password)
-    db.updateUser(user.id, {
+    await db.updateUser(user.id, {
       passwordHash,
       emailVerified: true,
       providers: Array.from(new Set([...(user.providers || []), 'password'])),
     })
-    db.consumeReset(rec.id)
-    return loginUser(res, db.findUserById(user.id))
+    await db.consumeReset(rec.id)
+    return loginUser(res, await db.findUserById(user.id))
   }),
 )
 
