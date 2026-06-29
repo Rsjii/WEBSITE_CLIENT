@@ -17,8 +17,9 @@ export default function LoadingScreen() {
       <div className="loader-frame">
         <div className="loader-hline top" />
         <div className="loader-inner">
-          <div className="loader-mark">◆</div>
-          <div className="loader-logo">AuraTrade</div>
+          <div className="loader-mark">
+            <img src="/logo.png" alt="AuraTrade" className="loader-logo-img" />
+          </div>
           <div className="loader-tagline">Elite Trading Platform</div>
         </div>
         <div className="loader-hline bottom" />

@@ -10,7 +10,7 @@ export default function AuthShell({ eyebrow, title, subtitle, children, footer }
       {/* Brand showcase */}
       <aside className="auth__brand">
         <Link to="/" className="auth__logo">
-          AURATRADE
+          <img src="/logo.png" alt="AuraTrade" className="auth__logo-img" />
           <span className="auth__logo-tag">Elite Trading Platform</span>
         </Link>
 

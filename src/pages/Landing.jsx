@@ -175,7 +175,9 @@ export default function Landing() {
 
       {/* ── NAV ─────────────────────────────────────── */}
       <nav className="glass-nav">
-        <Link className="nav-logo" to="/">AuraTrade</Link>
+        <Link className="nav-logo" to="/">
+          <img src="/logo.png" alt="AuraTrade" className="nav-logo-img" />
+        </Link>
         <ul className="nav-links">
           <li><a href="#accounts">Accounts</a></li>
           <li><a href="#why">Why Us</a></li>
@@ -326,7 +328,9 @@ export default function Landing() {
       <footer className="site-footer">
         <div className="footer-top">
           <div className="footer-brand">
-            <div className="footer-logo">AuraTrade</div>
+            <div className="footer-logo">
+              <img src="/logo.png" alt="AuraTrade" className="footer-logo-img" />
+            </div>
             <p className="footer-tag">Elite Trading Platform</p>
             <p className="footer-risk">
               Risk Warning: Trading CFDs involves significant risk of loss and is not suitable for all investors.

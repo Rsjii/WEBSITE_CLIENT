@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import AuthShell from '../../components/auth/AuthShell'
 import { TextField, PasswordField } from '../../components/auth/Field'
 import GoogleButton from '../../components/auth/GoogleButton'
+import LegalModal from '../../components/LegalModal'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../lib/api'
 
@@ -16,6 +17,7 @@ export default function Signup() {
   const [topError, setTopError] = useState('')
   const [existsHint, setExistsHint] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [modal, setModal] = useState(null)
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
@@ -57,6 +59,7 @@ export default function Signup() {
   }
 
   return (
+    <>
     <AuthShell
       eyebrow="Get started"
       title="Create your account"
@@ -113,7 +116,10 @@ export default function Signup() {
           <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
           <span className="auth-check__box" aria-hidden />
           <span className="auth-check__label">
-            I agree to the <Link to="/terms">Terms &amp; Conditions</Link> and <Link to="/privacy">Privacy Policy</Link>.
+            I agree to the{' '}
+            <button type="button" className="auth-link-btn" onClick={() => setModal('terms')}>Terms &amp; Conditions</button>
+            {' '}and{' '}
+            <button type="button" className="auth-link-btn" onClick={() => setModal('privacy')}>Privacy Policy</button>.
           </span>
         </label>
         {errors.accept && <span className="auth-check__msg">{errors.accept}</span>}
@@ -132,5 +138,8 @@ export default function Signup() {
         onError={(e) => setTopError(e.message)}
       />
     </AuthShell>
+
+    {modal && <LegalModal type={modal} onClose={() => setModal(null)} />}
+    </>
   )
 }
