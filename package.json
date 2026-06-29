@@ -1,0 +1,30 @@
+{
+  "name": "cinematic-portal",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:server": "npm --prefix server run dev",
+    "dev:all": "concurrently -n web,api -c yellow,green \"npm run dev\" \"npm run dev:server\"",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@react-three/drei": "^9.109.2",
+    "@react-three/fiber": "^8.17.10",
+    "@react-three/postprocessing": "^2.16.3",
+    "gsap": "^3.12.5",
+    "lenis": "^1.1.14",
+    "postprocessing": "^6.36.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
+    "three": "^0.167.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^9.0.1",
+    "vite": "^5.4.8"
+  }
+}

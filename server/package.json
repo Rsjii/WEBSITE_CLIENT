@@ -1,0 +1,22 @@
+{
+  "name": "auratrade-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AuraTrade backend — auth API (email+OTP, Google OAuth, password reset)",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.4.1",
+    "google-auth-library": "^9.15.0",
+    "jsonwebtoken": "^9.0.2",
+    "resend": "^4.0.1"
+  }
+}
