@@ -17,11 +17,17 @@ async function send({ to, subject, html, devBody }) {
     return { delivered: false, dev: true }
   }
   try {
-    await resend.emails.send({ from: config.emailFrom, to, subject, html })
+    const result = await resend.emails.send({ from: config.emailFrom, to, subject, html })
+    if (result?.error) {
+      console.error('\x1b[31m✗ Resend error:\x1b[0m', JSON.stringify(result.error))
+      devLog(subject, to, devBody)
+      return { delivered: false, error: result.error?.message }
+    }
+    console.log(`\x1b[32m✓ Email sent\x1b[0m → ${to} (id: ${result?.data?.id})`)
     return { delivered: true }
   } catch (err) {
     console.error('\x1b[31m✗ Resend failed:\x1b[0m', err?.message || err)
-    devLog(subject, to, devBody) // never block the flow on email failure in dev
+    devLog(subject, to, devBody)
     return { delivered: false, error: err?.message }
   }
 }

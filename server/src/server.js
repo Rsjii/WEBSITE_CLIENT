@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
+import morgan from 'morgan'
 import { config, printConfigWarnings } from './config.js'
 import { migrate } from './migrate.js'
 import authRoutes from './routes/auth.routes.js'
@@ -17,6 +18,7 @@ app.use(
     credentials: true,
   }),
 )
+app.use(morgan('dev'))
 app.use(express.json({ limit: '1mb' }))
 app.use(cookieParser())
 
