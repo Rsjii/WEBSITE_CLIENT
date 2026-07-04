@@ -29,7 +29,7 @@ export default function Scene({ mouseRef }) {
 
   return (
     <>
-      <color attach="background" args={['#050402']} />
+      <color attach="background" args={['#150f08']} />
       <HeroScene />
     </>
   )

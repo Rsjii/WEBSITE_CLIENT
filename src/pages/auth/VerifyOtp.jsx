@@ -67,7 +67,7 @@ export default function VerifyOtp() {
       title="Enter your code"
       subtitle={
         <>
-          We sent a 6-digit code to <strong style={{ color: '#e9e2cc' }}>{email}</strong>.
+          We sent a 6-digit code to <strong style={{ color: 'var(--beige-100)' }}>{email}</strong>.
         </>
       }
       footer={

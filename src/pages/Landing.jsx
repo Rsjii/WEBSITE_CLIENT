@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import Scene from '../components/Scene'
 import LoadingScreen from '../components/LoadingScreen'
+import LogoCutoutFilter from '../components/LogoCutoutFilter'
 import { initScroll } from '../utils/scroll'
 import { api } from '../lib/api'
 import gsap from 'gsap'
@@ -79,13 +80,24 @@ const DEPOSITS = [
 ]
 
 const WHY = [
-  { icon: '🏛', title: 'Institutional Execution',  desc: 'Direct market access with institutional-grade infrastructure. No requotes, no manipulation on any pair.' },
-  { icon: '🔒', title: 'Segregated Funds',         desc: 'Your capital held in segregated tier-1 bank accounts. Always protected, always accessible.' },
-  { icon: '👑', title: 'Premium Support',          desc: 'Dedicated relationship managers for serious earners. White-glove multilingual service, 24/7.' },
-  { icon: '🌍', title: '24/7 Global Access',       desc: 'Elite support team available around the clock via live chat, email and direct phone line.' },
-  { icon: '💎', title: 'Instant Crypto Funding',   desc: 'Fund your account in seconds via USDT, USDC, BTC, ETH across multiple networks. Zero fees.' },
-  { icon: '📊', title: 'Advanced Analytics',       desc: 'Premium market analysis, economic calendar, real-time signals and institutional charting tools.' },
+  { icon: 'bank',   title: 'Institutional Execution',  desc: 'Direct market access with institutional-grade infrastructure. No requotes, no manipulation on any pair.' },
+  { icon: 'shield', title: 'Segregated Funds',         desc: 'Your capital held in segregated tier-1 bank accounts. Always protected, always accessible.' },
+  { icon: 'crown',  title: 'Premium Support',          desc: 'Dedicated relationship managers for serious earners. White-glove multilingual service, 24/7.' },
+  { icon: 'globe',  title: '24/7 Global Access',       desc: 'Elite support team available around the clock via live chat, email and direct phone line.' },
+  { icon: 'gem',    title: 'Instant Crypto Funding',   desc: 'Fund your account in seconds via USDT, USDC, BTC, ETH across multiple networks. Zero fees.' },
+  { icon: 'chart',  title: 'Advanced Analytics',       desc: 'Premium market analysis, economic calendar, real-time signals and institutional charting tools.' },
 ]
+
+const ICON_PROPS = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round' }
+
+const ICONS = {
+  bank:   <svg {...ICON_PROPS}><path d="M2 9.5 12 4l10 5.5" /><path d="M4 9.5V20M9 9.5V20M15 9.5V20M20 9.5V20" /><path d="M2 20h20" /></svg>,
+  shield: <svg {...ICON_PROPS}><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" /></svg>,
+  crown:  <svg {...ICON_PROPS}><path d="M4 18h16l-1.4-7.6-3.9 3-1.9-5-1.9 5-3.9-3L4 18z" /><path d="M4 20.5h16" /></svg>,
+  globe:  <svg {...ICON_PROPS}><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3c2.4 2.5 3.8 5.5 3.8 9s-1.4 6.5-3.8 9c-2.4-2.5-3.8-5.5-3.8-9s1.4-6.5 3.8-9z" /></svg>,
+  gem:    <svg {...ICON_PROPS}><path d="M9 3h6l5 5-8 12L4 8l5-5z" /><path d="M4 8h16M9 3l3 5 3-5M12 8v12" /></svg>,
+  chart:  <svg {...ICON_PROPS}><path d="M4 20V11M10 20V4M16 20v-8" /><path d="M2 20h20" /></svg>,
+}
 
 // ── Components ─────────────────────────────────────────────────────────
 
@@ -267,19 +279,7 @@ export default function Landing() {
       <div ref={ringRef} className="cursor-ring" />
       <div ref={dotRef}  className="cursor-dot"  />
 
-      {/* Cuts the flat dark-navy square out of /logo.png, keeping only the
-          bright emblem + its own glow — see index.css .hero-logo-img etc. */}
-      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
-        <defs>
-          <filter id="logo-cutout" x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
-            <feColorMatrix in="SourceGraphic" type="luminanceToAlpha" result="lum" />
-            <feComponentTransfer in="lum" result="keyMask">
-              <feFuncA type="linear" slope="4" intercept="-0.2" />
-            </feComponentTransfer>
-            <feComposite in="SourceGraphic" in2="keyMask" operator="in" />
-          </filter>
-        </defs>
-      </svg>
+      <LogoCutoutFilter />
 
       {/* Ambient particle canvas — fixed bg */}
       <Canvas
@@ -357,16 +357,9 @@ export default function Landing() {
         {/* Logo visual */}
         <div className="hero-visual">
           <div className="hv-glow-orb" />
-          <div className="hv-ray hv-ray-1" />
-          <div className="hv-ray hv-ray-2" />
-          <div className="hv-ray hv-ray-3" />
-          <div className="hv-sparks">
-            {Array.from({ length: 12 }, (_, i) => (
-              <span key={i} className={`hv-spark hv-spark-${i + 1}`} />
-            ))}
-          </div>
+          <div className="hv-ring" />
+          <div className="hv-ray" />
           <img src="/logo.png" alt="AuraTrade" className="hero-logo-img" draggable={false} />
-          <div className="hv-scan" />
           <div className="hv-bottom-fade" />
         </div>
 
@@ -396,7 +389,7 @@ export default function Landing() {
             {WHY.map((w, i) => (
               <div key={i} className="why-card">
                 <div className="why-icon-wrap">
-                  <span className="why-icon">{w.icon}</span>
+                  <span className="why-icon">{ICONS[w.icon]}</span>
                 </div>
                 <h3>{w.title}</h3>
                 <p>{w.desc}</p>

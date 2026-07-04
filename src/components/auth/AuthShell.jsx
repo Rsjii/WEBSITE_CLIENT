@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import LogoCutoutFilter from '../LogoCutoutFilter'
 
 // Premium split layout for all auth screens: brand showcase on the left,
 // form card on the right. Collapses to a single column on mobile.
@@ -6,6 +7,7 @@ export default function AuthShell({ eyebrow, title, subtitle, children, footer }
   return (
     <div className="auth">
       <div className="auth__bg" aria-hidden />
+      <LogoCutoutFilter />
 
       {/* Brand showcase */}
       <aside className="auth__brand">
@@ -16,7 +18,7 @@ export default function AuthShell({ eyebrow, title, subtitle, children, footer }
 
         <div className="auth__pitch">
           <h2 className="auth__pitch-title">
-            Where Wealth<br />Moves.
+            Where <span className="hero-h1-gold">Wealth</span><br />Moves.
           </h2>
           <p className="auth__pitch-sub">
             Join serious traders accessing Forex, Crypto, Stocks, Indices &amp; Commodities with
