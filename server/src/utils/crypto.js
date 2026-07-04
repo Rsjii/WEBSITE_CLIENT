@@ -49,6 +49,20 @@ export function verifySession(token) {
   }
 }
 
+// Short-lived token issued between "password/Google verified" and "2FA code
+// verified" — never a full session, just proof of the first factor.
+export function signTwoFactorChallenge(user) {
+  return jwt.sign({ sub: user.id, purpose: '2fa' }, config.jwtSecret, { expiresIn: '5m' })
+}
+export function verifyTwoFactorChallenge(token) {
+  try {
+    const payload = jwt.verify(token, config.jwtSecret)
+    return payload.purpose === '2fa' ? payload : null
+  } catch {
+    return null
+  }
+}
+
 // ── Cookie helpers ───────────────────────────────────────
 const COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 7 // 7 days
 

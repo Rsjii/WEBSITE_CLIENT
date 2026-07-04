@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import AuthShell from '../../components/auth/AuthShell'
 import { TextField, PasswordField } from '../../components/auth/Field'
 import GoogleButton from '../../components/auth/GoogleButton'
@@ -10,8 +10,9 @@ import { api } from '../../lib/api'
 export default function Signup() {
   const { setUser } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', referralCode: searchParams.get('ref') || '' })
   const [accept, setAccept] = useState(false)
   const [errors, setErrors] = useState({})
   const [topError, setTopError] = useState('')
@@ -48,6 +49,7 @@ export default function Signup() {
         email: form.email,
         password: form.password,
         acceptTerms: accept,
+        referralCode: form.referralCode.trim() || undefined,
       })
       navigate('/verify', { state: { email: res.email, devMode: res.devMode, linking: res.linking } })
     } catch (err) {
@@ -111,6 +113,12 @@ export default function Signup() {
           onChange={set('confirm')}
           error={errors.confirm}
         />
+        <TextField
+          label="Referral code (optional)"
+          placeholder="e.g. AB3D9F2K"
+          value={form.referralCode}
+          onChange={(e) => setForm((f) => ({ ...f, referralCode: e.target.value.toUpperCase() }))}
+        />
 
         <label className={`auth-check${errors.accept ? ' auth-check--err' : ''}`}>
           <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
@@ -131,8 +139,12 @@ export default function Signup() {
 
       <div className="auth-divider"><span>or</span></div>
       <GoogleButton
-        onSuccess={(user) => {
-          setUser(user)
+        onSuccess={(data) => {
+          if (data.twoFactorRequired) {
+            navigate('/two-factor', { state: { tempToken: data.tempToken, dest: '/dashboard' } })
+            return
+          }
+          setUser(data.user)
           navigate('/dashboard', { replace: true })
         }}
         onError={(e) => setTopError(e.message)}

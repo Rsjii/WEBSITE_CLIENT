@@ -4,15 +4,19 @@ import { db } from '../db.js'
 import { publicUser } from '../utils/publicUser.js'
 
 // Reads the session cookie, verifies it, and attaches req.user (sanitized).
-export function requireAuth(req, res, next) {
-  const token = req.cookies?.[config.cookieName]
-  const payload = token && verifySession(token)
-  if (!payload) return res.status(401).json({ error: 'Not authenticated.' })
+export async function requireAuth(req, res, next) {
+  try {
+    const token = req.cookies?.[config.cookieName]
+    const payload = token && verifySession(token)
+    if (!payload) return res.status(401).json({ error: 'Not authenticated.' })
 
-  const user = db.findUserById(payload.sub)
-  if (!user) return res.status(401).json({ error: 'Session no longer valid.' })
+    const user = await db.findUserById(payload.sub)
+    if (!user) return res.status(401).json({ error: 'Session no longer valid.' })
 
-  req.user = user
-  req.publicUser = publicUser(user)
-  next()
+    req.user = user
+    req.publicUser = publicUser(user)
+    next()
+  } catch (err) {
+    next(err)
+  }
 }

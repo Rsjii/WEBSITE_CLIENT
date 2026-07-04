@@ -2,14 +2,14 @@ import { Suspense, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import BrandLoader from '../../components/BrandLoader'
+import WalletWidget from './WalletWidget'
 
 const I = {
   overview: 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
   portfolio: 'M3 3v18h18M7 14l3-3 3 3 5-6',
   markets: 'M4 19V5m4 14V9m4 10V7m4 12v-6m4 6V11',
-  deposit: 'M12 3v12m0 0l-4-4m4 4l4-4M5 21h14',
-  withdraw: 'M12 21V9m0 0L8 13m4-4l4 4M5 3h14',
-  tx: 'M4 7h16M4 12h16M4 17h10',
+  funds: 'M3 7a2 2 0 012-2h13a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7zM16 12h.01M3 9h18',
+  referrals: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
   settings:
     'M12 15a3 3 0 100-6 3 3 0 000 6zm7.4-3a7.4 7.4 0 00-.1-1.2l2-1.6-2-3.4-2.4 1a7.3 7.3 0 00-2-1.2l-.4-2.6H9.5l-.4 2.6a7.3 7.3 0 00-2 1.2l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 000 2.4l-2 1.6 2 3.4 2.4-1c.6.5 1.3.9 2 1.2l.4 2.6h5l.4-2.6c.7-.3 1.4-.7 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z',
 }
@@ -18,9 +18,8 @@ const NAV = [
   { to: '/dashboard', end: true, label: 'Overview', icon: I.overview },
   { to: '/dashboard/portfolio', label: 'Portfolio', icon: I.portfolio },
   { to: '/dashboard/markets', label: 'Markets', icon: I.markets },
-  { to: '/dashboard/deposit', label: 'Deposit', icon: I.deposit },
-  { to: '/dashboard/withdraw', label: 'Withdraw', icon: I.withdraw },
-  { to: '/dashboard/transactions', label: 'Transactions', icon: I.tx },
+  { to: '/dashboard/funds', label: 'Funds', icon: I.funds },
+  { to: '/dashboard/referrals', label: 'Referrals', icon: I.referrals },
   { to: '/dashboard/settings', label: 'Settings', icon: I.settings },
 ]
 
@@ -91,6 +90,7 @@ export default function DashboardLayout() {
               <span>Balance</span>
               <strong>{fmt.format(user?.balance ?? 0)}</strong>
             </div>
+            <WalletWidget />
             <div className="dash__avatar dash__avatar--sm">{user?.avatar ? <img src={user.avatar} alt="" /> : initials}</div>
           </div>
         </header>

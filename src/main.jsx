@@ -13,13 +13,14 @@ const Signup = lazy(() => import('./pages/auth/Signup'))
 const VerifyOtp = lazy(() => import('./pages/auth/VerifyOtp'))
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'))
+const TwoFactor = lazy(() => import('./pages/auth/TwoFactor'))
+const LegalPage = lazy(() => import('./pages/LegalPage'))
 const DashboardLayout = lazy(() => import('./pages/dashboard/DashboardLayout'))
 const Overview = lazy(() => import('./pages/dashboard/tabs/Overview'))
 const Portfolio = lazy(() => import('./pages/dashboard/tabs/Portfolio'))
 const Markets = lazy(() => import('./pages/dashboard/tabs/Markets'))
-const Deposit = lazy(() => import('./pages/dashboard/tabs/Deposit'))
-const Withdraw = lazy(() => import('./pages/dashboard/tabs/Withdraw'))
-const Transactions = lazy(() => import('./pages/dashboard/tabs/Transactions'))
+const Funds = lazy(() => import('./pages/dashboard/tabs/Funds'))
+const Referrals = lazy(() => import('./pages/dashboard/tabs/Referrals'))
 const Settings = lazy(() => import('./pages/dashboard/tabs/Settings'))
 
 createRoot(document.getElementById('root')).render(
@@ -34,14 +35,16 @@ createRoot(document.getElementById('root')).render(
           <Route path="/verify" element={<VerifyOtp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/two-factor" element={<TwoFactor />} />
+          <Route path="/terms" element={<LegalPage type="terms" />} />
+          <Route path="/privacy" element={<LegalPage type="privacy" />} />
 
           <Route path="/dashboard" element={<Protected><DashboardLayout /></Protected>}>
             <Route index element={<Overview />} />
             <Route path="portfolio" element={<Portfolio />} />
             <Route path="markets" element={<Markets />} />
-            <Route path="deposit" element={<Deposit />} />
-            <Route path="withdraw" element={<Withdraw />} />
-            <Route path="transactions" element={<Transactions />} />
+            <Route path="funds" element={<Funds />} />
+            <Route path="referrals" element={<Referrals />} />
             <Route path="settings" element={<Settings />} />
           </Route>
 

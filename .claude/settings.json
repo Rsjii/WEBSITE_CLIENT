@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node _verify_flow.mjs)",
+      "Bash(node -e ' *)",
+      "Bash(rm \"c:/dev/DALAL/server/_verify_flow.mjs\")",
+      "Bash(node -e \"console.log\\(require\\('c:/dev/DALAL/node_modules/qrcode/package.json'\\).main\\)\")",
+      "Bash(node verify.mjs)",
+      "Bash(node --check src/routes/markets.routes.js)",
+      "Bash(node --check src/server.js)",
+      "Bash(curl -s http://localhost:4000/api/markets/crypto)",
+      "Bash(curl -s -o /dev/null -w \"cached response time: %{time_total}s \\(status %{http_code}\\)\\\\n\" http://localhost:4000/api/markets/crypto)",
+      "Bash(chromium-cli --help)",
+      "Bash(npx --yes playwright --version)"
+    ]
+  }
+}

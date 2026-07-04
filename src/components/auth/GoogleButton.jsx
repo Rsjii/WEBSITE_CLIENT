@@ -61,8 +61,8 @@ export default function GoogleButton({ onSuccess, onError }) {
           client_id: clientId,
           callback: async (resp) => {
             try {
-              const { user } = await api.google({ credential: resp.credential })
-              onSuccess?.(user)
+              const data = await api.google({ credential: resp.credential })
+              onSuccess?.(data)
             } catch (e) {
               onError?.(e)
             }

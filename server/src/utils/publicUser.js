@@ -12,6 +12,8 @@ export function publicUser(u) {
     balance: u.balance ?? 0,
     currency: u.currency || 'USD',
     hasPassword: Boolean(u.passwordHash),
+    twoFactorEnabled: Boolean(u.twoFactorEnabled),
+    referralCode: u.referralCode || null,
     createdAt: u.createdAt,
   }
 }

@@ -5,6 +5,10 @@ import morgan from 'morgan'
 import { config, printConfigWarnings } from './config.js'
 import { migrate } from './migrate.js'
 import authRoutes from './routes/auth.routes.js'
+import walletRoutes from './routes/wallet.routes.js'
+import referralRoutes from './routes/referrals.routes.js'
+import marketsRoutes from './routes/markets.routes.js'
+import contactRoutes from './routes/contact.routes.js'
 
 const app = express()
 app.set('trust proxy', 1)
@@ -28,6 +32,10 @@ app.get('/api/config', (req, res) => {
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }))
 
 app.use('/api/auth', authRoutes)
+app.use('/api/wallet', walletRoutes)
+app.use('/api/referrals', referralRoutes)
+app.use('/api/markets', marketsRoutes)
+app.use('/api/contact', contactRoutes)
 
 app.use((req, res) => res.status(404).json({ error: 'Not found.' }))
 

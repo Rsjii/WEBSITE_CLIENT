@@ -32,6 +32,9 @@ async function send({ to, subject, html, devBody }) {
   }
 }
 
+const ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ESCAPE_MAP[c])
+
 // ── Branded email shell ──────────────────────────────────
 function shell(title, bodyHtml) {
   return `<!doctype html><html><body style="margin:0;background:#050504;font-family:'Segoe UI',Arial,sans-serif;">
@@ -71,4 +74,18 @@ export function sendResetEmail(to, link) {
      <p style="color:#6f6b5c;font-size:11px;margin-top:22px;word-break:break-all;">Or paste this link: ${link}</p>`,
   )
   return send({ to, subject: 'Reset your AuraTrade password', html, devBody: `Reset link: ${link}` })
+}
+
+export function sendContactEmail({ name, email, message }) {
+  const html = shell(
+    'New contact form message',
+    `<p style="color:#b9b4a6;font-size:14px;line-height:1.7;margin:0 0 6px;"><strong style="color:#e8e0c8;">From:</strong> ${escapeHtml(name)} (${escapeHtml(email)})</p>
+     <p style="color:#e8e0c8;font-size:14px;line-height:1.7;white-space:pre-wrap;margin-top:18px;">${escapeHtml(message)}</p>`,
+  )
+  return send({
+    to: config.contactEmail,
+    subject: `New message from ${name} — AuraTrade Contact`,
+    html,
+    devBody: `From: ${name} <${email}>\n\n${message}`,
+  })
 }

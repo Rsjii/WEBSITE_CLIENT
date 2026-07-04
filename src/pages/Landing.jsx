@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import Scene from '../components/Scene'
 import LoadingScreen from '../components/LoadingScreen'
 import { initScroll } from '../utils/scroll'
+import { api } from '../lib/api'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
@@ -28,21 +29,42 @@ const TICKERS = [
 
 const ACCOUNTS = [
   {
-    name: 'AURA',
+    name: 'STANDARD',
     badge: null,
+    tagline: null,
     min: '$100',
-    leverage: '1:2000',
-    spread: 'From 0.1 pips',
+    ticket: '$10',
     commission: 'Zero commission',
     accent: '#C9A84C',
+    cta: 'Open Account',
+    comingSoon: false,
     features: [
-      'WebTrader — all devices, zero download',
-      '200+ instruments: Forex, Crypto, Stocks, Indices',
+      '50/50 profit split on every earning cycle',
+      'Copy Earning — auto-mirror expert strategies',
+      '5% direct affiliate commission',
+      'Commission on ROI from your referrals',
       'Institutional-grade execution',
-      '24/7 multilingual premium support',
       'Segregated tier-1 bank accounts',
-      'Islamic / Swap-Free available',
       'Instant crypto deposit (USDT, BTC, ETH)',
+    ],
+  },
+  {
+    name: 'PRO',
+    badge: 'COMING SOON',
+    tagline: 'The Premium Edge',
+    min: '$1,000',
+    ticket: '$50',
+    commission: 'Zero commission',
+    accent: '#8B6914',
+    cta: 'Coming Soon',
+    comingSoon: true,
+    features: [
+      '50/50 profit split on every earning cycle',
+      'Copy Earning — auto-mirror expert strategies',
+      '5% direct affiliate commission',
+      'Commission on ROI from your referrals',
+      'Dedicated relationship manager',
+      'Priority execution & early market access',
     ],
   },
 ]
@@ -59,7 +81,7 @@ const DEPOSITS = [
 const WHY = [
   { icon: '🏛', title: 'Institutional Execution',  desc: 'Direct market access with institutional-grade infrastructure. No requotes, no manipulation on any pair.' },
   { icon: '🔒', title: 'Segregated Funds',         desc: 'Your capital held in segregated tier-1 bank accounts. Always protected, always accessible.' },
-  { icon: '👑', title: 'Premium Support',          desc: 'Dedicated relationship managers for serious traders. White-glove multilingual service, 24/7.' },
+  { icon: '👑', title: 'Premium Support',          desc: 'Dedicated relationship managers for serious earners. White-glove multilingual service, 24/7.' },
   { icon: '🌍', title: '24/7 Global Access',       desc: 'Elite support team available around the clock via live chat, email and direct phone line.' },
   { icon: '💎', title: 'Instant Crypto Funding',   desc: 'Fund your account in seconds via USDT, USDC, BTC, ETH across multiple networks. Zero fees.' },
   { icon: '📊', title: 'Advanced Analytics',       desc: 'Premium market analysis, economic calendar, real-time signals and institutional charting tools.' },
@@ -69,17 +91,17 @@ const WHY = [
 
 function AccountCard({ a }) {
   return (
-    <div className={`acc-card${a.badge === 'MOST POPULAR' ? ' acc-popular' : ''}`} style={{ '--ac': a.accent }}>
-      {a.badge && <div className="acc-badge">{a.badge}</div>}
+    <div className={`acc-card${a.comingSoon ? ' acc-soon' : ''}`} style={{ '--ac': a.accent }}>
+      {a.badge && <div className={`acc-badge${a.comingSoon ? ' acc-badge--soon' : ''}`}>{a.badge}</div>}
       <div className="acc-name">{a.name}</div>
+      {a.tagline && <div className="acc-tagline">{a.tagline}</div>}
       <div className="acc-min-wrap">
         <span className="acc-min-val">{a.min}</span>
         <span className="acc-min-lbl">min deposit</span>
       </div>
       <div className="acc-divider" />
       <ul className="acc-specs">
-        <li><span>Leverage</span><strong>{a.leverage}</strong></li>
-        <li><span>Spread</span><strong>{a.spread}</strong></li>
+        <li><span>Ticket Size</span><strong>{a.ticket}</strong></li>
         <li><span>Commission</span><strong>{a.commission}</strong></li>
       </ul>
       <ul className="acc-feats">
@@ -87,8 +109,90 @@ function AccountCard({ a }) {
           <li key={i}><span className="feat-dot" />{f}</li>
         ))}
       </ul>
-      <Link to="/signup" className="acc-cta">Open Account</Link>
+      {a.comingSoon ? (
+        <span className="acc-cta acc-cta--disabled">{a.cta}</span>
+      ) : (
+        <Link to="/signup" className="acc-cta">{a.cta}</Link>
+      )}
     </div>
+  )
+}
+
+function ContactForm() {
+  const [form, setForm] = useState({ name: '', email: '', message: '' })
+  const [status, setStatus] = useState('idle') // idle | sending | sent | error
+  const [error, setError] = useState('')
+
+  async function onSubmit(e) {
+    e.preventDefault()
+    setStatus('sending')
+    setError('')
+    try {
+      await api.contact(form)
+      setStatus('sent')
+      setForm({ name: '', email: '', message: '' })
+    } catch (err) {
+      setStatus('error')
+      setError(err.message || 'Something went wrong. Please try again.')
+    }
+  }
+
+  if (status === 'sent') {
+    return (
+      <div className="contact-success">
+        <span className="contact-success-icon">✓</span>
+        <p>Thanks — your message has been sent. Our team will get back to you shortly.</p>
+      </div>
+    )
+  }
+
+  return (
+    <form className="contact-form" onSubmit={onSubmit}>
+      <div className="contact-grid">
+        <label className="field">
+          <span className="field__label">Name</span>
+          <div className="field__box">
+            <input
+              className="field__input"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="Your name"
+              required
+            />
+          </div>
+        </label>
+        <label className="field">
+          <span className="field__label">Email</span>
+          <div className="field__box">
+            <input
+              className="field__input"
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+        </label>
+      </div>
+      <label className="field">
+        <span className="field__label">Message</span>
+        <div className="field__box field__box--textarea">
+          <textarea
+            className="field__input"
+            rows={5}
+            value={form.message}
+            onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
+            placeholder="How can we help?"
+            required
+          />
+        </div>
+      </label>
+      {status === 'error' && <p className="contact-error">{error}</p>}
+      <button type="submit" className="auth-btn contact-submit" disabled={status === 'sending'}>
+        {status === 'sending' ? 'Sending…' : 'Send Message'}
+      </button>
+    </form>
   )
 }
 
@@ -163,6 +267,20 @@ export default function Landing() {
       <div ref={ringRef} className="cursor-ring" />
       <div ref={dotRef}  className="cursor-dot"  />
 
+      {/* Cuts the flat dark-navy square out of /logo.png, keeping only the
+          bright emblem + its own glow — see index.css .hero-logo-img etc. */}
+      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+        <defs>
+          <filter id="logo-cutout" x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
+            <feColorMatrix in="SourceGraphic" type="luminanceToAlpha" result="lum" />
+            <feComponentTransfer in="lum" result="keyMask">
+              <feFuncA type="linear" slope="4" intercept="-0.2" />
+            </feComponentTransfer>
+            <feComposite in="SourceGraphic" in2="keyMask" operator="in" />
+          </filter>
+        </defs>
+      </svg>
+
       {/* Ambient particle canvas — fixed bg */}
       <Canvas
         camera={{ position: [0, 0, 8], fov: 50 }}
@@ -173,74 +291,7 @@ export default function Landing() {
         <Scene mouseRef={mouseRef} />
       </Canvas>
 
-      {/* ── NAV ─────────────────────────────────────── */}
-      <nav className="glass-nav">
-        <Link className="nav-logo" to="/">
-          <img src="/logo.png" alt="AuraTrade" className="nav-logo-img" />
-        </Link>
-        <ul className="nav-links">
-          <li><a href="#accounts">Accounts</a></li>
-          <li><a href="#why">Why Us</a></li>
-          <li><a href="#deposits">Funding</a></li>
-        </ul>
-        <div className="nav-actions">
-          <Link to="/login"  className="nav-login">Login</Link>
-          <Link to="/signup" className="nav-open">Open Account</Link>
-        </div>
-      </nav>
-
-      {/* ── HERO ─────────────────────────────────────── */}
-      <section className="hero-sec">
-        <div className="hero-inner">
-          <span className="hero-eyebrow">— Premium Trading Platform — Global Markets — Elite Execution</span>
-          <h1 className="hero-h1">
-            Where <span className="hero-h1-gold">Wealth</span><br />Moves.
-          </h1>
-          <p className="hero-sub">
-            Access Forex, Crypto, Stocks, Indices &amp; Commodities<br />
-            with institutional-grade execution built for serious traders.
-          </p>
-          <div className="hero-ctas">
-            <Link to="/signup" className="btn-primary">Open Live Account</Link>
-            <a href="#why"     className="btn-ghost">Why AuraTrade</a>
-          </div>
-          <div className="hero-stats-row">
-            {[
-              { v: '50,000+', l: 'Active Traders' },
-              { v: '$2B+',    l: 'Daily Volume'   },
-              { v: '200+',    l: 'Instruments'    },
-              { v: '1:2000',  l: 'Max Leverage'   },
-            ].map((s, i) => (
-              <div key={i} className="hero-stat">
-                <span className="hero-stat-v">{s.v}</span>
-                <span className="hero-stat-l">{s.l}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Bull visual */}
-        <div className="hero-visual">
-          <div className="hv-glow-orb" />
-          <div className="hv-ray hv-ray-1" />
-          <div className="hv-ray hv-ray-2" />
-          <div className="hv-ray hv-ray-3" />
-          <div className="hv-sparks">
-            {Array.from({ length: 12 }, (_, i) => (
-              <span key={i} className={`hv-spark hv-spark-${i + 1}`} />
-            ))}
-          </div>
-          <img src="/main.png" alt="AuraTrade Bull" className="hero-bull-img" draggable={false} />
-          <div className="hv-scan" />
-          <div className="hv-bottom-fade" />
-        </div>
-
-        <div className="hero-scroll-cue">
-          <div className="scroll-bar" /><span>Scroll</span>
-        </div>
-      </section>
-
-      {/* ── LIVE TICKER ──────────────────────────────── */}
+      {/* ── LIVE TICKER — pinned to the very top ─────── */}
       <div className="ticker-wrap">
         <div className="ticker-live">LIVE</div>
         <div className="ticker-track">
@@ -256,12 +307,80 @@ export default function Landing() {
         </div>
       </div>
 
+      {/* ── NAV ─────────────────────────────────────── */}
+      <nav className="glass-nav">
+        <Link className="nav-brand" to="/">AURATRADE</Link>
+        <div className="nav-right">
+          <ul className="nav-links">
+            <li><a href="#accounts">Accounts</a></li>
+            <li><a href="#why">Why Us</a></li>
+            <li><a href="#deposits">Funding</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+          <div className="nav-actions">
+            <Link to="/login"  className="nav-login">Login</Link>
+            <Link to="/signup" className="nav-open">Open Account</Link>
+          </div>
+        </div>
+      </nav>
+
+      {/* ── HERO ─────────────────────────────────────── */}
+      <section className="hero-sec">
+        <div className="hero-inner">
+          <span className="hero-eyebrow">— Premium Earning Platform — Global Markets — Elite Execution</span>
+          <h1 className="hero-h1">
+            Where <span className="hero-h1-gold">Wealth</span><br />Moves.
+          </h1>
+          <p className="hero-sub">
+            Access Forex, Crypto, Stocks, Indices &amp; Commodities<br />
+            with institutional-grade execution built for serious earners.
+          </p>
+          <div className="hero-ctas">
+            <Link to="/signup" className="btn-primary">Open Live Account</Link>
+            <a href="#why"     className="btn-ghost">Why AuraTrade</a>
+          </div>
+          <div className="hero-stats-row">
+            {[
+              { v: '50,000+', l: 'Active Earners' },
+              { v: '$2B+',    l: 'Daily Volume'   },
+              { v: '200+',    l: 'Instruments'    },
+              { v: '50/50',   l: 'Profit Split'   },
+            ].map((s, i) => (
+              <div key={i} className="hero-stat">
+                <span className="hero-stat-v">{s.v}</span>
+                <span className="hero-stat-l">{s.l}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Logo visual */}
+        <div className="hero-visual">
+          <div className="hv-glow-orb" />
+          <div className="hv-ray hv-ray-1" />
+          <div className="hv-ray hv-ray-2" />
+          <div className="hv-ray hv-ray-3" />
+          <div className="hv-sparks">
+            {Array.from({ length: 12 }, (_, i) => (
+              <span key={i} className={`hv-spark hv-spark-${i + 1}`} />
+            ))}
+          </div>
+          <img src="/logo.png" alt="AuraTrade" className="hero-logo-img" draggable={false} />
+          <div className="hv-scan" />
+          <div className="hv-bottom-fade" />
+        </div>
+
+        <div className="hero-scroll-cue">
+          <div className="scroll-bar" /><span>Scroll</span>
+        </div>
+      </section>
+
       {/* ── ACCOUNTS ─────────────────────────────────── */}
       <section id="accounts" className="sec accounts-sec">
         <div className="sec-inner">
-          <span className="s-eyebrow">One Account. Everything Included.</span>
-          <h2 className="s-heading">Start Trading from $100</h2>
-          <p className="s-sub">No tiers. No hidden upgrades. One account unlocks every market, every instrument, zero commission.</p>
+          <span className="s-eyebrow">Two Tiers. One Earning Engine.</span>
+          <h2 className="s-heading">Start Earning From $100</h2>
+          <p className="s-sub">Standard or Pro — both unlock every global market with zero commission, a 50/50 profit split and direct affiliate rewards. Tickets from just $10.</p>
           <div className="acc-grid">
             {ACCOUNTS.map((a, i) => <AccountCard key={i} a={a} />)}
           </div>
@@ -309,18 +428,28 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── CONTACT ──────────────────────────────────── */}
+      <section id="contact" className="sec contact-sec">
+        <div className="sec-inner contact-inner">
+          <span className="s-eyebrow">Get In Touch</span>
+          <h2 className="s-heading">Talk To Our Team</h2>
+          <p className="s-sub">Questions about tiers, funding or your account? Send a message and our support team will reply shortly.</p>
+          <ContactForm />
+        </div>
+      </section>
+
       {/* ── CTA ──────────────────────────────────────── */}
       <section className="sec cta-sec">
         <div className="cta-inner">
           <div className="cta-glow" />
           <span className="s-eyebrow">Begin Your Journey</span>
-          <h2 className="cta-h2">Elevate Your<br />Trading Today.</h2>
+          <h2 className="cta-h2">Elevate Your<br />Earning Today.</h2>
           <p className="cta-sub">Open your account now. Deposit instantly via crypto. Access every market on earth.</p>
           <div className="hero-ctas">
             <Link to="/signup" className="btn-primary">Open Live Account</Link>
             <Link to="/login"  className="btn-ghost">Sign In</Link>
           </div>
-          <p className="cta-legal">By registering you confirm you are 18+ and accept our <Link to="/signup">Terms of Service</Link>.</p>
+          <p className="cta-legal">By registering you confirm you are 18+ and accept our <Link to="/terms">Terms of Service</Link>.</p>
         </div>
       </section>
 
@@ -331,33 +460,28 @@ export default function Landing() {
             <div className="footer-logo">
               <img src="/logo.png" alt="AuraTrade" className="footer-logo-img" />
             </div>
-            <p className="footer-tag">Elite Trading Platform</p>
+            <p className="footer-tag">Elite Earning Platform</p>
             <p className="footer-risk">
-              Risk Warning: Trading CFDs involves significant risk of loss and is not suitable for all investors.
-              Leverage products can result in losses exceeding your initial deposit. Please ensure you fully understand the risks.
+              Risk Warning: Participating in leveraged earning programs involves significant risk of loss and is not suitable for all investors.
+              Returns are not guaranteed and you may lose more than your initial deposit. Please ensure you fully understand the risks.
             </p>
           </div>
           <div className="footer-cols">
             <div className="footer-col">
-              <h4>Trading</h4>
+              <h4>Markets</h4>
               <a href="#">Forex</a><a href="#">Cryptocurrencies</a>
               <a href="#">Stocks</a><a href="#">Commodities</a><a href="#">Indices</a>
             </div>
             <div className="footer-col">
-              <h4>Accounts</h4>
-              <a href="#">Standard</a><a href="#">ECN</a>
-              <a href="#">Swap-Free</a><a href="#">Pro</a>
-            </div>
-            <div className="footer-col">
               <h4>Company</h4>
-              <a href="#">About Us</a><a href="#">Legal</a>
-              <a href="#">Privacy Policy</a><a href="#">Contact</a><a href="#">Referral</a>
+              <a href="#why">About Us</a><Link to="/terms">Legal</Link>
+              <Link to="/privacy">Privacy Policy</Link><a href="#contact">Contact</a><Link to="/signup">Referral</Link>
             </div>
           </div>
         </div>
         <div className="footer-bottom">
           <span>© 2025 AuraTrade. All rights reserved.</span>
-          <span>Risk Warning: CFDs are complex instruments and come with a high risk of losing money.</span>
+          <span>Risk Warning: Earning programs are complex and carry a high risk of losing money.</span>
         </div>
       </footer>
     </>

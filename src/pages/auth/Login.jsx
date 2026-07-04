@@ -18,8 +18,12 @@ export default function Login() {
   const [useGoogleHint, setUseGoogleHint] = useState(false)
   const [busy, setBusy] = useState(false)
 
-  const finish = (user) => {
-    setUser(user)
+  const finish = (data) => {
+    if (data.twoFactorRequired) {
+      navigate('/two-factor', { state: { tempToken: data.tempToken, dest } })
+      return
+    }
+    setUser(data.user)
     navigate(dest, { replace: true })
   }
 
@@ -29,8 +33,8 @@ export default function Login() {
     setUseGoogleHint(false)
     setBusy(true)
     try {
-      const { user } = await api.login({ email, password })
-      finish(user)
+      const data = await api.login({ email, password })
+      finish(data)
     } catch (err) {
       setError(err.message)
       if (err.code === 'USE_GOOGLE') setUseGoogleHint(true)

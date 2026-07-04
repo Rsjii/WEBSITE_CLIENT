@@ -14,3 +14,6 @@ export const authLimiter = make(15 * 60 * 1000, 30, 'Too many attempts. Please t
 
 // OTP / email sending — protect the mail provider and inbox.
 export const otpLimiter = make(15 * 60 * 1000, 12, 'Too many code requests. Please wait a while and try again.')
+
+// Public contact form — protect the mail provider from spam/abuse.
+export const contactLimiter = make(15 * 60 * 1000, 10, 'Too many messages sent. Please wait a while and try again.')

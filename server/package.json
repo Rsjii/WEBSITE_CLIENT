@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "AuraTrade backend — auth API (email+OTP, Google OAuth, password reset)",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js"

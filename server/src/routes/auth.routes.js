@@ -12,7 +12,10 @@ import {
   signSession,
   setSessionCookie,
   clearSessionCookie,
+  signTwoFactorChallenge,
+  verifyTwoFactorChallenge,
 } from '../utils/crypto.js'
+import { generateSecret, otpauthUrl, verifyTotp } from '../utils/totp.js'
 import { verifyGoogleCredential } from '../utils/google.js'
 import { sendOtpEmail, sendResetEmail } from '../mailer.js'
 import { requireAuth } from '../middleware/requireAuth.js'
@@ -33,7 +36,12 @@ const cleanName = (n) => String(n || '').trim().slice(0, 60)
 
 const a = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)
 
-function loginUser(res, user) {
+// Issues a full session — unless the account has 2FA enabled, in which case
+// it hands back a short-lived challenge token instead of a session cookie.
+function completeLogin(res, user) {
+  if (user.twoFactorEnabled) {
+    return res.json({ twoFactorRequired: true, tempToken: signTwoFactorChallenge(user) })
+  }
   setSessionCookie(res, signSession(user))
   return res.json({ user: publicUser(user) })
 }
@@ -43,7 +51,7 @@ router.post(
   '/signup',
   otpLimiter,
   a(async (req, res) => {
-    const { name, email, password, acceptTerms } = req.body || {}
+    const { name, email, password, acceptTerms, referralCode } = req.body || {}
 
     if (!isEmail(email)) return res.status(400).json({ error: 'Please enter a valid email address.' })
     const pwIssue = passwordIssue(password)
@@ -58,6 +66,13 @@ router.post(
     const passwordHash = await hashPassword(password)
     const code = generateOtp()
 
+    // A bad/unknown referral code shouldn't block signup — just skip it silently.
+    let referredBy = null
+    if (referralCode) {
+      const referrer = await db.findUserByReferralCode(referralCode)
+      if (referrer) referredBy = referrer.id
+    }
+
     await db.upsertPending({
       email,
       name: cleanName(name) || undefined,
@@ -66,6 +81,7 @@ router.post(
       otpExpires: new Date(Date.now() + config.otpTtlMin * 60_000).toISOString(),
       attempts: 0,
       lastSentAt: new Date().toISOString(),
+      referredBy,
     })
 
     const mail = await sendOtpEmail(email, code)
@@ -119,10 +135,11 @@ router.post(
         passwordHash: pending.passwordHash,
         emailVerified: true,
         providers: ['password'],
+        referredById: pending.referredBy,
       })
     }
     await db.deletePending(email)
-    return loginUser(res, user)
+    return completeLogin(res, user)
   }),
 )
 
@@ -177,7 +194,7 @@ router.post(
     if (!(await verifyPassword(password, user.passwordHash)))
       return res.status(401).json({ error: 'Invalid email or password.' })
 
-    return loginUser(res, user)
+    return completeLogin(res, user)
   }),
 )
 
@@ -222,7 +239,7 @@ router.post(
     }
 
     await db.deletePending(profile.email)
-    return loginUser(res, user)
+    return completeLogin(res, user)
   }),
 )
 
@@ -272,7 +289,68 @@ router.post(
       providers: Array.from(new Set([...(user.providers || []), 'password'])),
     })
     await db.consumeReset(rec.id)
-    return loginUser(res, await db.findUserById(user.id))
+    return completeLogin(res, await db.findUserById(user.id))
+  }),
+)
+
+// ── 2FA: setup / enable / disable (account settings) ─────
+router.post(
+  '/2fa/setup',
+  requireAuth,
+  a(async (req, res) => {
+    const secret = generateSecret()
+    await db.updateUser(req.user.id, { twoFactorPendingSecret: secret })
+    res.json({ secret, otpauthUrl: otpauthUrl(secret, req.user.email) })
+  }),
+)
+
+router.post(
+  '/2fa/enable',
+  requireAuth,
+  a(async (req, res) => {
+    const { code } = req.body || {}
+    if (!req.user.twoFactorPendingSecret) return res.status(400).json({ error: 'Start setup first.' })
+    if (!verifyTotp(req.user.twoFactorPendingSecret, code))
+      return res.status(400).json({ error: 'Incorrect code. Check your authenticator app and try again.' })
+
+    await db.updateUser(req.user.id, {
+      twoFactorSecret: req.user.twoFactorPendingSecret,
+      twoFactorPendingSecret: null,
+      twoFactorEnabled: true,
+    })
+    res.json({ ok: true })
+  }),
+)
+
+router.post(
+  '/2fa/disable',
+  requireAuth,
+  a(async (req, res) => {
+    const { code } = req.body || {}
+    if (!req.user.twoFactorEnabled) return res.status(400).json({ error: '2FA is not enabled.' })
+    if (!verifyTotp(req.user.twoFactorSecret, code)) return res.status(400).json({ error: 'Incorrect code.' })
+
+    await db.updateUser(req.user.id, { twoFactorSecret: null, twoFactorPendingSecret: null, twoFactorEnabled: false })
+    res.json({ ok: true })
+  }),
+)
+
+// ── POST /2fa/verify-login ────────────────────────────────
+// Completes a login that completeLogin() paused for a second factor.
+router.post(
+  '/2fa/verify-login',
+  authLimiter,
+  a(async (req, res) => {
+    const { tempToken, code } = req.body || {}
+    const payload = tempToken && verifyTwoFactorChallenge(tempToken)
+    if (!payload) return res.status(401).json({ error: 'This verification step expired. Please sign in again.', code: 'BAD_CHALLENGE' })
+
+    const user = await db.findUserById(payload.sub)
+    if (!user || !user.twoFactorEnabled) return res.status(401).json({ error: 'Account not found.', code: 'BAD_CHALLENGE' })
+    if (!verifyTotp(user.twoFactorSecret, code)) return res.status(400).json({ error: 'Incorrect code.' })
+
+    setSessionCookie(res, signSession(user))
+    res.json({ user: publicUser(user) })
   }),
 )
 

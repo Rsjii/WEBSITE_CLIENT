@@ -17,7 +17,7 @@ export default function Overview() {
           <h2>{greet}, {firstName}.</h2>
           <p>Here’s a snapshot of your managed portfolio.</p>
         </div>
-        <Link to="/dashboard/deposit" className="auth-btn auth-btn--inline">Deposit funds</Link>
+        <Link to="/dashboard/funds" className="auth-btn auth-btn--inline">Deposit funds</Link>
       </div>
 
       <div className="stat-grid">
@@ -41,7 +41,7 @@ export default function Overview() {
             </div>
           </div>
           {balance <= 0 && (
-            <Link to="/dashboard/deposit" className="auth-btn auth-btn--inline" style={{ marginTop: '1.2rem' }}>
+            <Link to="/dashboard/funds" className="auth-btn auth-btn--inline" style={{ marginTop: '1.2rem' }}>
               Make your first deposit
             </Link>
           )}
@@ -49,8 +49,8 @@ export default function Overview() {
 
         <Panel title="Quick Actions">
           <div className="quick">
-            <Link to="/dashboard/deposit" className="quick__item"><span>＋</span> Deposit</Link>
-            <Link to="/dashboard/withdraw" className="quick__item"><span>↑</span> Withdraw</Link>
+            <Link to="/dashboard/funds" className="quick__item"><span>＋</span> Deposit</Link>
+            <Link to="/dashboard/funds" className="quick__item"><span>↑</span> Withdraw</Link>
             <Link to="/dashboard/markets" className="quick__item"><span>≈</span> Markets</Link>
             <Link to="/dashboard/settings" className="quick__item"><span>⚙</span> Settings</Link>
           </div>

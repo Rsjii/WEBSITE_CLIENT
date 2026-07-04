@@ -39,4 +39,21 @@ export const api = {
   forgot: (body) => request('/auth/forgot-password', { method: 'POST', body }),
   reset: (body) => request('/auth/reset-password', { method: 'POST', body }),
   logout: () => request('/auth/logout', { method: 'POST' }),
+
+  twoFactorSetup: () => request('/auth/2fa/setup', { method: 'POST' }),
+  twoFactorEnable: (body) => request('/auth/2fa/enable', { method: 'POST', body }),
+  twoFactorDisable: (body) => request('/auth/2fa/disable', { method: 'POST', body }),
+  twoFactorVerifyLogin: (body) => request('/auth/2fa/verify-login', { method: 'POST', body }),
+
+  walletOverview: () => request('/wallet/overview'),
+  walletDeposit: (body) => request('/wallet/deposit', { method: 'POST', body }),
+  walletWithdraw: (body) => request('/wallet/withdraw', { method: 'POST', body }),
+  openAccount: (body) => request('/wallet/accounts', { method: 'POST', body }),
+
+  referralsOverview: () => request('/referrals/overview'),
+  applyReferralCode: (body) => request('/referrals/apply', { method: 'POST', body }),
+
+  marketsCrypto: () => request('/markets/crypto'),
+
+  contact: (body) => request('/contact', { method: 'POST', body }),
 }
